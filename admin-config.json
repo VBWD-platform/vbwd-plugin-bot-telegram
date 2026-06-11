@@ -1,0 +1,42 @@
+{
+  "tabs": [
+    {
+      "id": "general",
+      "label": "General",
+      "fields": [
+        {
+          "key": "debug_mode",
+          "label": "Debug mode",
+          "component": "checkbox",
+          "description": "Enable verbose debug logging. Disable in production (live mode)."
+        },
+        {
+          "key": "default_parse_mode",
+          "label": "Default parse mode",
+          "component": "select",
+          "options": [
+            { "value": "HTML", "label": "HTML" },
+            { "value": "MarkdownV2", "label": "MarkdownV2" }
+          ],
+          "description": "Telegram parse_mode applied to every outbound message."
+        },
+        {
+          "key": "poll_interval_seconds",
+          "label": "Dev poll interval (seconds)",
+          "component": "input",
+          "inputType": "number",
+          "min": 1,
+          "max": 60,
+          "description": "Cadence of the dev long-poll worker between getUpdates passes. Dev/no-public-HTTPS transport only; the webhook is the production path."
+        },
+        {
+          "key": "public_base_url",
+          "label": "Public base URL",
+          "component": "input",
+          "inputType": "text",
+          "description": "HTTPS base URL Telegram pushes webhooks to (used by Set webhook). Leave empty in dev (use the long-poll worker)."
+        }
+      ]
+    }
+  ]
+}

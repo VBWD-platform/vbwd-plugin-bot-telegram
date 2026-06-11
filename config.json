@@ -1,0 +1,6 @@
+{
+  "debug_mode": false,
+  "default_parse_mode": "HTML",
+  "poll_interval_seconds": 2,
+  "public_base_url": ""
+}
