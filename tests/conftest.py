@@ -61,11 +61,37 @@ def app():
         import plugins.bot_base.bot_base.models  # noqa: F401
         import plugins.bot_telegram.bot_telegram.models  # noqa: F401
 
-        _db.create_all()
-        yield application
-        _db.session.remove()
-        _db.drop_all()
+        # Build the full schema exactly ONCE, resetting the public schema first
+        # (clearing any table or ENUM type left by a prior crashed run or a
+        # sibling suite sharing this ``*_test`` DB). A per-test create_all/
+        # drop_all strands standalone PG ENUM types and races other suites on
+        # the shared catalog — see vbwd/testing/integration_db.py.
+        from vbwd.testing.integration_db import reset_schema_and_create_all
+
+        reset_schema_and_create_all(_db)
+
+    yield application
+
+    with application.app_context():
         _db.engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_test(app):
+    """Clear data before each test (the schema is built once per session).
+
+    Without per-test isolation a sibling suite's mid-session schema reset
+    (DROP SCHEMA CASCADE) could leave this suite with leftover or missing rows;
+    truncating on SETUP makes each test deterministic regardless of run order.
+    """
+    from vbwd.extensions import db as _db
+
+    with app.app_context():
+        from vbwd.testing.integration_db import truncate_all_tables
+
+        truncate_all_tables(_db)
+        yield
+        _db.session.remove()
 
 
 @pytest.fixture
