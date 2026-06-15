@@ -40,6 +40,29 @@ def _ensure_test_db(url: str) -> None:
         engine.dispose()
 
 
+def _ensure_bot_telegram_enabled(flask_app) -> None:
+    """Enable bot_telegram (+ peer plugins it needs) so on_enable registrations
+    fire. A fresh per-plugin CI clone has no plugins.json, so the plugin is
+    discovered-but-not-enabled; bot_base must be enabled first so its
+    messenger_provider_registry exists on the container. Idempotent.
+    """
+    from vbwd.plugins.base import PluginStatus
+
+    manager = getattr(flask_app, "plugin_manager", None)
+    if manager is None:
+        return
+    with flask_app.app_context():
+        for plugin_name in ("bot_base", "bot_telegram"):
+            plugin = manager.get_plugin(plugin_name)
+            if plugin is None or plugin.status == PluginStatus.ENABLED:
+                continue
+            try:
+                manager.enable_plugin(plugin_name)
+            except ValueError:
+                if plugin.status == PluginStatus.INITIALIZED:
+                    plugin.enable()
+
+
 @pytest.fixture(scope="session")
 def app():
     from vbwd.app import create_app
@@ -68,6 +91,8 @@ def app():
         from vbwd.testing.integration_db import ensure_schema_and_baseline
 
         ensure_schema_and_baseline(_db)
+
+    _ensure_bot_telegram_enabled(application)
 
     yield application
 
