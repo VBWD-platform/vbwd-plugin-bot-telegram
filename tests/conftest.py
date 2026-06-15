@@ -61,14 +61,13 @@ def app():
         import plugins.bot_base.bot_base.models  # noqa: F401
         import plugins.bot_telegram.bot_telegram.models  # noqa: F401
 
-        # Build the full schema exactly ONCE, resetting the public schema first
-        # (clearing any table or ENUM type left by a prior crashed run or a
-        # sibling suite sharing this ``*_test`` DB). A per-test create_all/
-        # drop_all strands standalone PG ENUM types and races other suites on
-        # the shared catalog — see vbwd/testing/integration_db.py.
-        from vbwd.testing.integration_db import reset_schema_and_create_all
+        # Build the schema once per process (create_all, checkfirst — never
+        # drops, so it cannot wipe data) and commit baseline reference rows
+        # once. Each test then isolates itself via a rolled-back transaction
+        # (no TRUNCATE, no DROP) — see vbwd/testing/integration_db.py.
+        from vbwd.testing.integration_db import ensure_schema_and_baseline
 
-        reset_schema_and_create_all(_db)
+        ensure_schema_and_baseline(_db)
 
     yield application
 
@@ -77,21 +76,31 @@ def app():
 
 
 @pytest.fixture(autouse=True)
-def _isolate_test(app):
-    """Clear data before each test (the schema is built once per session).
+def _isolate_test(app, request):
+    """Isolate every test in a rolled-back transaction (self-cleaning, no wipe).
 
-    Without per-test isolation a sibling suite's mid-session schema reset
-    (DROP SCHEMA CASCADE) could leave this suite with leftover or missing rows;
-    truncating on SETUP makes each test deterministic regardless of run order.
+    Autouse so route specs that request only ``client`` are isolated too; nothing
+    a test writes persists past it (the rollback IS the cleanup). The schema +
+    baseline reference rows are built once in the ``app`` fixture. See
+    vbwd/testing/integration_db.py.
+
+    A test marked ``no_db_isolation`` (e.g. the migration spec that opens its own
+    connection and rolls back itself) runs WITHOUT the wrapper, keeping
+    ``db.engine`` a real Engine.
     """
     from vbwd.extensions import db as _db
 
-    with app.app_context():
-        from vbwd.testing.integration_db import truncate_all_tables
+    if request.node.get_closest_marker("no_db_isolation") is not None:
+        with app.app_context():
+            yield
+            _db.session.remove()
+        return
 
-        truncate_all_tables(_db)
-        yield
-        _db.session.remove()
+    with app.app_context():
+        from vbwd.testing.integration_db import rollback_isolation
+
+        with rollback_isolation(_db):
+            yield
 
 
 @pytest.fixture
