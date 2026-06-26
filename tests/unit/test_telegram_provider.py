@@ -78,12 +78,12 @@ def test_parse_update_callback_query_maps_to_action_data():
         "callback_query": {
             "from": {"id": 999},
             "message": {"chat": {"id": 555}},
-            "data": "taro:reveal:3",
+            "data": "tarot:reveal:3",
         }
     }
     inbound = _provider().parse_update(update)
 
-    assert inbound.action_data == "taro:reveal:3"
+    assert inbound.action_data == "tarot:reveal:3"
     assert inbound.chat_ref == ChatRef(provider_id="telegram", chat_id="555")
     assert inbound.sender_ref == "999"
     assert inbound.command is None
@@ -109,7 +109,7 @@ def test_send_renders_choices_as_inline_keyboard():
     reply = BotReply(
         text="Pick one",
         choices=[
-            BotChoice(label="Reveal", action_data="taro:reveal:1"),
+            BotChoice(label="Reveal", action_data="tarot:reveal:1"),
             BotChoice(label="Cancel", action_data="bot-base:cancel:0"),
         ],
     )
@@ -119,7 +119,7 @@ def test_send_renders_choices_as_inline_keyboard():
     markup = client.sent_messages[0]["payload"]["reply_markup"]
     assert markup == {
         "inline_keyboard": [
-            [{"text": "Reveal", "callback_data": "taro:reveal:1"}],
+            [{"text": "Reveal", "callback_data": "tarot:reveal:1"}],
             [{"text": "Cancel", "callback_data": "bot-base:cancel:0"}],
         ]
     }
