@@ -46,7 +46,7 @@ class BotTelegramPlugin(BasePlugin):
     def metadata(self) -> PluginMetadata:
         return PluginMetadata(
             name="bot-telegram",
-            version="26.6",
+            version="26.6.1",
             author="VBWD Team",
             description=(
                 "Telegram messenger provider for the bot bridge: normalizes "
