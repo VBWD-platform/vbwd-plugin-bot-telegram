@@ -14,7 +14,7 @@ from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from flask import current_app
 
-from vbwd.plugins.base import BasePlugin, PluginMetadata
+from vbwd.plugins.base import BasePlugin, PluginMetadata, PublicRouteDeclaration
 
 if TYPE_CHECKING:
     from flask import Blueprint
@@ -61,6 +61,14 @@ class BotTelegramPlugin(BasePlugin):
         if config:
             merged.update(config)
         super().initialize(merged)
+
+    def declare_public_routes(self) -> PublicRouteDeclaration:
+        """Public per-bot Telegram webhook (the secret path is the capability)."""
+        return PublicRouteDeclaration(
+            mutation={
+                "/api/v1/plugins/bot-telegram/webhook/<bot>": "Telegram bot webhook; secret path is the capability.",
+            },
+        )
 
     def get_blueprint(self) -> Optional["Blueprint"]:
         from plugins.bot_telegram.bot_telegram.routes import bot_telegram_bp
